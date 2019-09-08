@@ -1,0 +1,6 @@
+build/*
+*.log
+*.vagrant
+*.packer
+*output*
+*.retry

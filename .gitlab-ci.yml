@@ -1,0 +1,67 @@
+stages:
+  - dev
+
+variables:
+    DEV_AWS_ACCESS_KEY: ${DEV_AWS_ACCESS_KEY}
+    DEV_AWS_SECRET_KEY: ${DEV_AWS_SECRET_KEY}
+    AWS_REGION: "eu-central-1"
+    ANSIBLE_VERSION: "2.8.4-1ppa~bionic"
+    ANSIBLE_NOMAD_VERSION: "0.9.5"
+    ANSIBLE_NOMAD_NODE_ROLE: "server"
+    ANSIBLE_NOMAD_DATACENTER: "dc1"
+    ANSIBLE_NOMAD_DOCKER_ENABLE: "false"
+    ANSIBLE_NOMAD_USE_CONSUL: "false"
+    ANSIBLE_NOMAD_DISABLE_UPDATE_CHECK: "false"
+    ANSIBLE_NOMAD_CONSUL_ADDRESS: "localhost:8500"
+    ANSIBLE_NOMAD_NODE_NAME: "nomad"
+    ANSIBLE_NOMAD_BIND_ADDRESS: "0.0.0.0"
+    PACKER_LOG: 0
+    CI_DEBUG_TRACE: "true"
+
+.build: &build
+  image: ${DOCKER_REGISTRY}/ops.dice.se/packer:1.4.3
+  tags:
+    - diceops
+    - docker
+  before_script:
+    - |
+      cat <<EOF > /tmp/packer_aws_env_file
+      $PACKER_AWS_ENV_FILE
+      EOF
+  script:
+    - >
+      packer build
+      -only="${PACKER_BUILD_PROVIDER}"
+      -var ANSIBLE_VERSION="${ANSIBLE_VERSION}"
+      -var ANSIBLE_NOMAD_VERSION="${ANSIBLE_NOMAD_VERSION}"
+      -var ANSIBLE_NOMAD_NODE_ROLE="${ANSIBLE_NOMAD_NODE_ROLE}"
+      -var ANSIBLE_NOMAD_DATACENTER="${ANSIBLE_NOMAD_DATACENTER}"
+      -var ANSIBLE_NOMAD_DOCKER_ENABLE="${ANSIBLE_NOMAD_DOCKER_ENABLE}"
+      -var ANSIBLE_NOMAD_USE_CONSUL="${ANSIBLE_NOMAD_USE_CONSUL}"
+      -var ANSIBLE_NOMAD_DISABLE_UPDATE_CHECK="${ANSIBLE_NOMAD_DISABLE_UPDATE_CHECK}"
+      -var ANSIBLE_NOMAD_CONSUL_ADDRESS="${ANSIBLE_NOMAD_CONSUL_ADDRESS}"
+      -var ANSIBLE_NOMAD_NODE_NAME="${ANSIBLE_NOMAD_NODE_NAME}"
+      -var ANSIBLE_NOMAD_CONSUL_ADDRESS="${ANSIBLE_NOMAD_CONSUL_ADDRESS}"
+      -var aws_region="${AWS_REGION}"
+      -var aws_access_key="${AWS_ACCESS_KEY}"
+      -var aws_secret_key="${AWS_SECRET_KEY}"
+      templates.json
+  when: manual
+
+build dev nomad server:
+  <<: *build
+  stage: dev
+  variables:
+    PACKER_BUILD_PROVIDER: "amazon-ebs"
+    ANSIBLE_NOMAD_NODE_ROLE: "server"
+    AWS_ACCESS_KEY: "${DEV_AWS_ACCESS_KEY}"
+    AWS_SECRET_KEY: "${DEV_AWS_SECRET_KEY}"
+
+build dev nomad client:
+  <<: *build
+  stage: dev
+  variables:
+    PACKER_BUILD_PROVIDER: "amazon-ebs"
+    ANSIBLE_NOMAD_NODE_ROLE: "server"
+    AWS_ACCESS_KEY: "${DEV_AWS_ACCESS_KEY}"
+    AWS_SECRET_KEY: "${DEV_AWS_SECRET_KEY}"
